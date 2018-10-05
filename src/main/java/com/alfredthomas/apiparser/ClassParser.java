@@ -7,18 +7,14 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
-import org.springframework.core.io.ClassPathResource;
 
-import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public class ClassParser {
+class ClassParser {
 
-    public static void parseAllClasses(Document allClassDocument,String outputName)
+    static void parseAllClasses(Document allClassDocument,String outputName)
     {
         if(allClassDocument==null)
             return;
@@ -32,8 +28,8 @@ public class ClassParser {
 
 
             JSONArray jsonClassList = new JSONArray();
-            for (int i = 0; i < list.size(); i++) {
-                Element element = list.get(i).getElementsByTag("a").first();
+            for (Element aList : list) {
+                Element element = aList.getElementsByTag("a").first();
                 //parsing code goes here
 
                 JSONObject jsonObject = new JSONObject();
@@ -45,13 +41,13 @@ public class ClassParser {
                 String outPath = path.substring(0, path.lastIndexOf('.'));
                 jsonObject.put("path", outPath);
                 jsonClassList.put(jsonObject);
-//                System.out.println("PARSING: " + outPath);
+                System.out.println("PARSING: " + outPath);
 
-                ZipEntry zipEntry =  new ZipEntry(outPath.substring(baseURL.length()+1)+".json");
+                ZipEntry zipEntry = new ZipEntry(outPath.substring(baseURL.length() + 1) + ".json");
                 JSONObject jsonClass = ClassParser.parseHTMLFile(Util.readRemoteHTMLFile(path));
 
                 zipOutputStream.putNextEntry(zipEntry);
-                System.out.println("WRITING: "+outPath+" to "+outputName+".zip");
+                System.out.println("WRITING: " + outPath + " to " + outputName + ".zip");
                 zipOutputStream.write(jsonClass.toString().getBytes());
                 zipOutputStream.closeEntry();
 //                Util.writeToFile(ClassParser.parseHTMLFile(Util.readRemoteHTMLFile(path)), outputName + outPath.substring(baseURL.length()));
@@ -73,7 +69,7 @@ public class ClassParser {
             e.printStackTrace();
         }
     }
-    public static JSONObject parseHTMLFile(Document document)
+    private static JSONObject parseHTMLFile(Document document)
     {
 
         JSONObject classObject = new JSONObject();
@@ -104,7 +100,7 @@ public class ClassParser {
         parseDetails(contentContainer.getElementsByClass("details"),classObject);
         return classObject;
     }
-    public static void parseHeader(Elements headerElement, JSONObject classObject)
+    private static void parseHeader(Elements headerElement, JSONObject classObject)
     {
         if(!headerElement.isEmpty())
         {
@@ -118,7 +114,7 @@ public class ClassParser {
             addIfNotEmpty(classObject,header,"header");
         }
     }
-    public static void parseInheritance(Elements inheritanceElements, JSONObject classObject)
+    private static void parseInheritance(Elements inheritanceElements, JSONObject classObject)
     {
         if(!inheritanceElements.isEmpty()) {
             JSONArray inheritanceArray = new JSONArray();
@@ -220,7 +216,7 @@ public class ClassParser {
         addIfNotEmpty(classObject,detailsArray,"details");
 
     }
-    public static JSONObject parseTable(Element tableElement)
+    private static JSONObject parseTable(Element tableElement)
     {
         if(tableElement == null)
             return null;
@@ -230,9 +226,8 @@ public class ClassParser {
         JSONArray rows = new JSONArray();
 
         Elements tableHeaderElements = tableRows.get(0).getElementsByTag("th");
-        for(int i = 0; i<tableHeaderElements.size();i++)
-        {
-            addIfNotEmpty(headers,tableHeaderElements.get(i).text());
+        for (Element tableHeaderElement : tableHeaderElements) {
+            addIfNotEmpty(headers, tableHeaderElement.text());
         }
         addIfNotEmpty(tableJSONObject,headers,"headers");
 
@@ -249,20 +244,19 @@ public class ClassParser {
 
         return tableJSONObject;
     }
-    public static JSONObject parseList(Element listElement)
+    private static JSONObject parseList(Element listElement)
     {
         JSONObject tableJSONObject = new JSONObject();
         Elements listRows = listElement.children();
         JSONArray rows = new JSONArray();
 
-        for(int i = 0; i<listRows.size();i++)
-        {
-            addIfNotEmpty(rows,parseBlock(listRows.get(i)));
+        for (Element listRow : listRows) {
+            addIfNotEmpty(rows, parseBlock(listRow));
         }
         addIfNotEmpty(tableJSONObject,rows,"rows");
         return tableJSONObject;
     }
-    public static JSONObject parseBlock(Element element)
+    private static JSONObject parseBlock(Element element)
     {
         JSONObject block = new JSONObject();
         if(element==null)
@@ -297,24 +291,8 @@ public class ClassParser {
         }
 
         //replace links
-        int linkCount = 0;
-        List<JSONObject> linkList = new ArrayList<>();
         for(Element link: element.getElementsByTag("a"))
         {
-//            if(link.attr("href").isEmpty())
-//                continue;
-//            JSONObject linkObject = parseLink(link);
-//            if(linkList.contains(linkObject))
-//            {
-//                int index = linkList.indexOf(linkObject);
-//                replaceElement(link, "a", index+1);
-//            }
-//            else {
-//                linkList.add(linkObject);
-//                linkCount++;
-//                addIfNotEmpty(block, linkObject, "a" + linkCount);
-//                replaceElement(link, "a", linkCount);
-//            }
             replaceLinkInline(link);
         }
 
@@ -322,7 +300,7 @@ public class ClassParser {
         addIfNotEmpty(block,element.html().replaceAll("(</?code>)+",""),"text");
         return block;
     }
-    public static JSONArray parseDefinition(Element element)
+    private static JSONArray parseDefinition(Element element)
     {
         JSONArray definitionArray = new JSONArray();
 
@@ -363,7 +341,7 @@ public class ClassParser {
 
         return definitionArray;
     }
-    public static JSONObject parseLink(Element element)
+    private static JSONObject parseLink(Element element)
     {
         JSONObject link = new JSONObject();
         if(!element.tagName().equals("a") && !element.getElementsByTag("a").isEmpty())
@@ -390,7 +368,7 @@ public class ClassParser {
         Element headerElement =  root.select("h1,h2,h3,h4,h5,h6").first();
         return parseBlock(headerElement);
     }
-    public static JSONObject parseMethod(Element method)
+    private static JSONObject parseMethod(Element method)
     {
         JSONObject methodObject = new JSONObject();
 
