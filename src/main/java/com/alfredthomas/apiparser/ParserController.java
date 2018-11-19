@@ -27,7 +27,32 @@ public class ParserController {
             ClassParser.parseAllClasses(Util.getAllClassDocument(url), defaultOutPath +filename);
             File zipFile = new File(defaultOutPath + filename+".zip");
 
-            return ResponseEntity.ok()
+            return ResponseEntity.accepted()
+                    .contentLength(zipFile.length())
+                    .contentType(MediaType.parseMediaType("application/zip"))
+                    .header("Content-disposition", "attachment; filename="+ name+".zip")
+                    .body(new CleanupInputStreamResource(zipFile));
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+
+        }
+    }
+
+    @RequestMapping(value = "/getHTML", method = RequestMethod.GET, produces = "application/zip")
+    public ResponseEntity<InputStreamResource> getHTML(@RequestParam(value="url")String url,@RequestParam(value="name",defaultValue = "")String name)
+    {
+        String filename = Long.toString(counter.incrementAndGet());
+        if(name.isEmpty())
+            name="result";
+        try{
+            String defaultOutPath = "zips/";
+            ClassParser.downloadAllClassesHTML(Util.getAllClassDocument(url), defaultOutPath +filename);
+            File zipFile = new File(defaultOutPath + filename+".zip");
+
+            return ResponseEntity.accepted()
                     .contentLength(zipFile.length())
                     .contentType(MediaType.parseMediaType("application/zip"))
                     .header("Content-disposition", "attachment; filename="+ name+".zip")
@@ -46,7 +71,7 @@ public class ParserController {
                 @Override
                 public void close() throws IOException {
                     super.close();
-                    Files.delete(file.toPath());
+                    //Files.delete(file.toPath());
                 }
             });
         }

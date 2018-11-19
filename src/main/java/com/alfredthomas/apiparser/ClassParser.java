@@ -16,6 +16,14 @@ class ClassParser {
 
     static void parseAllClasses(Document allClassDocument,String outputName)
     {
+        iterateThroughAllClasses(allClassDocument,outputName,false);
+    }
+    static void downloadAllClassesHTML(Document allClassDocument,String outputName)
+    {
+        iterateThroughAllClasses(allClassDocument,outputName,true);
+    }
+    private static void iterateThroughAllClasses(Document allClassDocument,String outputName, boolean asHTML)
+    {
         if(allClassDocument==null)
             return;
         try {
@@ -41,14 +49,24 @@ class ClassParser {
                 String outPath = path.substring(0, path.lastIndexOf('.'));
                 jsonObject.put("path", outPath);
                 jsonClassList.put(jsonObject);
-                System.out.println("PARSING: " + outPath);
 
-                ZipEntry zipEntry = new ZipEntry(outPath.substring(baseURL.length() + 1) + ".json");
-                JSONObject jsonClass = ClassParser.parseHTMLFile(Util.readRemoteHTMLFile(path));
-
+                //stringToWrite is either parsed JSON or HTML file accordingly
+                String stringToWrite;
+                Document nextDocument = Util.readRemoteHTMLFile(path);
+                if(!asHTML) {
+                    System.out.println("PARSING: " + outPath);
+                    stringToWrite = parseHTMLFile(nextDocument).toString();
+                }
+                else
+                {
+                    stringToWrite = getHTMLFile(nextDocument);
+                }
+                if(stringToWrite == null || stringToWrite.isEmpty())
+                    continue;
+                ZipEntry zipEntry=new ZipEntry(outPath.substring(baseURL.length() + 1) + (asHTML?".html":".json"));
                 zipOutputStream.putNextEntry(zipEntry);
                 System.out.println("WRITING: " + outPath + " to " + outputName + ".zip");
-                zipOutputStream.write(jsonClass.toString().getBytes());
+                zipOutputStream.write(stringToWrite.getBytes());
                 zipOutputStream.closeEntry();
 //                Util.writeToFile(ClassParser.parseHTMLFile(Util.readRemoteHTMLFile(path)), outputName + outPath.substring(baseURL.length()));
 
@@ -57,8 +75,15 @@ class ClassParser {
 
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("classes", jsonClassList);
-            zipOutputStream.putNextEntry(new ZipEntry("class_list.json"));
-            zipOutputStream.write(jsonObject.toString().getBytes());
+            zipOutputStream.putNextEntry(new ZipEntry("class_list"+(asHTML?".html":".json")));
+            if(!asHTML) {
+                zipOutputStream.write(jsonObject.toString().getBytes());
+            }
+            else
+            {
+                zipOutputStream.write(allClassDocument.outerHtml().getBytes());
+
+            }
             zipOutputStream.closeEntry();
             zipOutputStream.close();
             fileOutputStream.close();
@@ -68,6 +93,12 @@ class ClassParser {
         {
             e.printStackTrace();
         }
+    }
+    private static String getHTMLFile(Document document)
+    {
+        if(document == null)
+            return null;
+        return document.outerHtml();
     }
     private static JSONObject parseHTMLFile(Document document)
     {
@@ -456,5 +487,17 @@ class ClassParser {
                 link.appendChild(childToString);
             }
         }
+    }
+    private static Document convertLinksToLocal(Document document)
+    {
+        if(document == null)
+            return null;
+        for (Element element:document.getElementsByTag("a")) {
+            if(element.attributes().hasKeyIgnoreCase("href"))
+                element.baseUri();
+                //element.setBaseUri();
+
+        }
+        return document;
     }
 }
